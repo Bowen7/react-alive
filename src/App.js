@@ -4,12 +4,11 @@ import 'codemirror/lib/codemirror.css'
 import 'codemirror/theme/material.css'
 import 'codemirror/mode/javascript/javascript'
 import runtime from 'serviceworker-webpack-plugin/lib/runtime'
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import template from '!!raw-loader!./template.jsx'
 import './App.css'
 function App() {
-  const [value, setValue] = useState(`
-const App = () => <div>123</div>
-export default App
-`)
+  const [value, setValue] = useState(template)
   const [loading, setLoading] = useState(true)
   const script = useRef()
   const init = () => {
@@ -36,14 +35,20 @@ export default App
           init()
         } else if (data.cmd === 'update') {
           if (script.current) {
-            document.body.removeChild(script.current)
+            window.hotUpdate()
+          } else {
+            script.current = document.createElement('script')
+            script.current.type = 'module'
+            script.current.innerHTML = `
+          import "/alive-app.js"
+          window.hotUpdate = async () => {
+            await import("/alive-component.jsx?t=" + Date.now())
+            const RefreshRuntime = (await import('/react-refresh/runtime')).default;
+            RefreshRuntime.performReactRefresh()
           }
-          script.current = document.createElement('script')
-          script.current.type = 'module'
-          script.current.innerText = `
-      import "/alive-app.js?t=${Date.now()}"
-      `
-          document.body.appendChild(script.current)
+          `
+            document.body.appendChild(script.current)
+          }
         }
       })
     }
